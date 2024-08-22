@@ -22,7 +22,7 @@ const generateJwtToken = (userData) => {
     username: userData.username,
     sub: userData.id.toString(),
     name: userData.first_name,
-    iss: "https://api.telegram.org",
+    iss: "tonspack",
     iat: Math.floor(Date.now() / 1000),
     exp: Math.floor(Date.now() / 1000) + 60 * 60, // 1 hour expiration
   };

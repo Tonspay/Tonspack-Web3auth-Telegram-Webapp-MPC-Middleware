@@ -7,8 +7,12 @@ const path = require("path");
 
 dotenv.config();
 
-const { TELEGRAM_BOT_NAME, TELEGRAM_BOT_TOKEN, SERVER_URL, CLIENT_URL, JWT_KEY_ID ,APP_URL } = process.env;
+const { TELEGRAM_BOT_NAME, TELEGRAM_BOT_TOKEN, SERVER_URL, CLIENT_URL, JWT_KEY_ID ,APP_URL,BASE_URL } = process.env;
 
+const router= {
+  wallet : BASE_URL+"wallet",
+  action : BASE_URL+"action"
+}
 const app = express();
 
 const privateKey = fs.readFileSync(path.resolve(__dirname, "privateKey.pem"), "utf8");
@@ -37,7 +41,7 @@ app.get("/.well-known/jwks.json", (req, res) => {
   res.send(JSON.parse(jwks));
 });
 
-app.get("/try", (req, res) => {
+app.get("/jwt/:path", (req, res) => {
   let htmlContent = `
   <!DOCTYPE HTML>
   <html lang="en">
@@ -70,6 +74,8 @@ app.get("/try", (req, res) => {
                   return false
               }
   
+
+
               async function init()
               {
                   const data = await miniapp_init()
@@ -77,11 +83,12 @@ app.get("/try", (req, res) => {
                       data
                   )
                   const bs64 = Buffer.from(data).toString("base64")
-                  const redirect =  location.origin + '/do?auth='+bs64
-                  console.log("🔥",redirect)
+                  const redirect =  location.origin + '/atuh/${req.query.path}?auth='+bs64+"&tgWebAppStartParam="+window.Telegram.WebApp.initDataUnsafe.start_param
+                  // console.log("🔥",redirect)
                   location.href = redirect
   
               }
+
           </script>
       </body>
   </head>
@@ -92,11 +99,11 @@ app.get("/try", (req, res) => {
   res.send(htmlContent);
 });
 // Endpoint to handle the Telegram callback
-app.get("/do", async (req, res) => {
+app.get("/auth/:path", async (req, res) => {
 
   const rawData = Buffer.from(req.query.auth,"base64").toString("utf-8")
-
-  console.log(rawData)
+  const path = req.query.path
+  console.log(rawData,req.query)
 
   const data = Object.fromEntries(new URLSearchParams( rawData ));
 
@@ -118,19 +125,21 @@ app.get("/do", async (req, res) => {
     )
 
 
-    const redirectUrl = `${CLIENT_URL}?token=${JWTtoken}`; // Redirect back to frontend with token
-    console.log(
-      "🔥 redirectUrl",redirectUrl
-    )
+    if(router[path])
+    {
+      const redirectUrl = `${router[path]}?token=${JWTtoken}&tgWebAppStartParam=${req.query.tgWebAppStartParam}`; // Redirect back to frontend with token
+      console.log(
+        "🔥 redirectUrl",redirectUrl
+      )
+      res.redirect(redirectUrl);
+    }
 
-    res.redirect(redirectUrl);
   }else{
     res.status(200).send({
       "code": 200,
       "data": "lol"
   })
   }
-
 })
 function tgVerfiy(apiToken, telegramInitData) {
 
